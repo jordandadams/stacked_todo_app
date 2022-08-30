@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:stacked_services/stacked_services.dart';
+import 'package:stacked_todo/app/app.router.dart';
 import 'app/locator.dart';
 import 'models/todo.adapter.dart';
 import 'ui/todos_screen/todos_screen_view.dart';
@@ -22,10 +24,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const TodosScreenView(),
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark(),
-      title: 'Flutter Stacked Todos Tutorial'
+      title: 'Flutter Stacked Todos Tutorial',
+      navigatorKey: StackedService.navigatorKey,
+      onGenerateRoute: StackedRouter().onGenerateRoute,
     );
   }
 }
