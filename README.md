@@ -481,3 +481,187 @@ flutter run
 Or just click `Run` at the top, and run without debugging.
 
 # (Optional) Adding Navigator:
+So some of the things we did above was just a tidbit of what the Stacked Architecture has to offer. We originally created an app with only one screen that allows you to add todos, check them off and remove them. Now out goal will be to add navigation throughout different screens in our app.
+
+You will need to configure Navigation or Routing in most if not all applications you’ll build with Flutter. Navigation is a necessity once you have more than one screen in the Flutter App.
+
+Stacked lets you configure an `@StackedApp` decoration on an empty Dart class. This decoration can take routes and dependencies info as in the following snippet:
+
+You will now need to add `build_runner` , `stacked_services` and `stacked_generator` packages to the Flutter `pubspec.yaml` file.
+
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/21bad6b0-cbaf-45a8-852f-ea97edebf0e8/Untitled.png)
+
+Once added we now need to create our routing files, but before we do that let’s create our startup/login view files before hand, so when we test the app we can actually have something to see.
+
+I plan to develop this app a little further as this will be the boiler plate template for my SaveJar production app, so I will title these pages `login_screen_view.dart` and `login_screen_viewmodel.dart` however, for this tutorial it will just show a standard startup view.
+
+If you read through the previous Stacked documentation regarding the Navigation setup, this will be very similar just with slight code changes since we will be using `get_it` .
+
+Anyhow, make sure to continue to follow the architecture we already have setup by creating a new folder called `login` within the `lib/ui` folder structure.
+
+Once you have the folder created along with the new view and view model, paste the following code in the files (please take note of the file name before pasting):
+
+```dart
+// login_screen_view.dart
+
+import 'package:flutter/material.dart';
+import 'package:stacked/stacked.dart';
+import 'login_screen_viewmodel.dart';
+
+class LoginScreenView extends StatelessWidget {
+  const LoginScreenView({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ViewModelBuilder<LoginScreenViewModel>.reactive(
+      builder: (context, model, child) => Scaffold(
+        floatingActionButton: FloatingActionButton(onPressed: model.doSomething, child: const Icon(Icons.arrow_forward),),
+        body: const Center(
+          child: Text('Start Up View, click the button to go to home view'),
+        ),
+      ),
+      viewModelBuilder: () => LoginScreenViewModel(),
+    );
+  }
+}
+```
+
+```dart
+// login_screen_viewmodel.dart
+
+import 'package:stacked/stacked.dart';
+import 'package:stacked_todo/app/app.router.dart';
+import 'package:stacked_services/stacked_services.dart';
+import 'package:stacked_todo/app/app.locator.dart';
+
+class LoginScreenViewModel extends BaseViewModel {
+  final _navigationService = locator<NavigationService>();
+
+  String title = '';
+
+  void doSomething() {
+    _navigationService.navigateTo(Routes.todosScreenView);
+  }
+}
+```
+
+Perfect, now that we have our view and view model created for the startup screen, we can now begin to create our Navigation.
+
+We currently already have an `app` folder created inside the `lib` folder, so we will want to create a new file called `app.dart` inside the `lib/app` folder.
+
+Once you have that file created, paste the following code inside that newly created `app.dart` file:
+
+```dart
+import 'package:stacked/stacked_annotations.dart';
+import 'package:stacked_services/stacked_services.dart';
+import 'package:stacked_todo/ui/login/login_screen_view.dart';
+import 'package:stacked_todo/ui/todos_screen/todos_screen_view.dart';
+
+@StackedApp(
+  routes: [
+    MaterialRoute(page: LoginScreenView, initial: true),
+    CustomRoute(page: TodosScreenView),
+  ],
+  dependencies: [
+    LazySingleton(classType: NavigationService),
+  ],
+)
+class App {
+  // Serves no purpose yet
+}
+```
+
+Some things to take notice here is how the initial page we are wanting to use when the app is launched. Notice how `MaterialRoute` is using the `LoginScreenView`  well this is what we use to identify the startup screen.
+
+Directly under `MaterialRoute` you have `CustomRoute` this will hold all your pages you will want to navigation to. Notice we have `TodosScreenView` being passed here.
+
+Okay, now that we have `app.dart` all setup, we can now head over to the `main.dart` page to make some changes to allow the `main.dart` page to load the correct startup page.
+
+Currently we have just the `TodosScreenView` being passed in the `home:` parameter, so we need to change the `main.dart` page to the following code:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:stacked_services/stacked_services.dart';
+import 'package:stacked_todo/app/app.router.dart';
+import 'app/locator.dart';
+import 'models/todo.adapter.dart';
+import 'ui/todos_screen/todos_screen_view.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Hive.initFlutter();
+  Hive.registerAdapter(TodoAdapter());
+  await Hive.openBox('todos');
+
+  setupLocator();
+
+  runApp(const MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData.dark(),
+      title: 'Flutter Stacked Todos Tutorial',
+      navigatorKey: StackedService.navigatorKey,
+      onGenerateRoute: StackedRouter().onGenerateRoute,
+    );
+  }
+}
+```
+
+Notice how we completely removed the `home:` parameter and decided to add `navigatorKey` and `onGenerateRoute` to which we then use both `StackedService` and `StackedRouter` to allow the pages to be displayed based on the `app.dart` file.
+
+Now, head back over to your `app.dart` file and open the terminal. Make sure you are in the app directory before running this command. Inside the terminal, run the following command:
+
+```dart
+flutter pub run build_runner build
+```
+
+After running this you will notice two files were created. You should now see `app.locator.dart` and `app.router.dart` . These two files were generated from that command. So, anytime you have a new route, just simply run the build_runner command and it will generate it for you.
+
+Now, go ahead and try to run the app.
+
+Did it work?
+
+If so great!
+
+But if you’re like me and ran into a get_it error, I am about to save you hours of fixing, and no Google did not give me this answer unfortunately. 
+
+Remember when we had to initialize our `TodosServie`? Well, we basically need to do the same for `NavigationService` located in our `login_screen_viewmodel.dart` file.
+
+Open up the `locator.dart` file located under `lib/app/locator.dart` and you will notice the line
+
+```dart
+final locator = GetIt.instance;
+```
+
+Then directly under that you should see a method called `setupLocator` . Currently this method is only initializing the `TodosService` , so in order to get our app to work we must add the `NavigationService` .
+
+Paste the following code into the `locator.dart` file:
+
+```dart
+import 'package:get_it/get_it.dart';
+import 'package:stacked_services/stacked_services.dart';
+import '../services/todos.service.dart';
+
+final locator = GetIt.instance;
+
+setupLocator() {
+  locator.registerLazySingleton(() => TodosService());
+  locator.registerLazySingleton(() => NavigationService());
+}
+```
+
+Hooray! Now you can run the app.
+
+# Source Code:
+
+You can find the full source code along with this same documentation at the link below:
+https://github.com/jordandadams/stacked_todo_app
